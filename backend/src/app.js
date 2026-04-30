@@ -1,30 +1,38 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-const { getCorsOrigin } = require("./config/env");
 
 const app = express();
 
+/* ---------------- CORS CONFIG ---------------- */
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://taskflow-teal-tau.vercel.app",
+];
+
+// allow requests with no origin (e.g. Postman) + whitelisted origins
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://taskflow-teal-tau.vercel.app"
-  ],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
+/* IMPORTANT: only one CORS middleware, no app.options("*") */
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // 👈 IMPORTANT (handles preflight)
 
-app.use(cors(corsOptions));
+/* ---------------- MIDDLEWARE ---------------- */
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
+/* ---------------- ROUTES ---------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/analytics", analyticsRoutes);
@@ -37,6 +45,7 @@ app.get("/", (req, res) => {
   });
 });
 
+/* ---------------- 404 ---------------- */
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -45,8 +54,9 @@ app.use((req, res) => {
   });
 });
 
+/* ---------------- ERROR HANDLER ---------------- */
 app.use((err, req, res, next) => {
-  if (err.message?.includes("not allowed by CORS")) {
+  if (err.message === "Not allowed by CORS") {
     return res.status(403).json({
       success: false,
       message: err.message,
