@@ -19,6 +19,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // 👈 IMPORTANT (handles preflight)
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
